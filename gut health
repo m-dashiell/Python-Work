@@ -1,0 +1,295 @@
+# -*- coding: utf-8 -*-
+"""
+A single Python script to compute and log daily high-protein, whole-foods diet goals,
+considering macronutrients and a general probiotic CFU target.
+
+To run this script:
+1. Save it as a .py file (e.g., daily_diet_tracker.py).
+2. Open a terminal or command prompt.
+3. Navigate to the directory where you saved the file.
+4. Run the script using: python daily_diet_tracker.py
+"""
+
+import math
+
+# --- 1. User Input and Goal Calculation ---
+
+def calculate_daily_goals():
+    """
+    Prompts the user for personal metrics and calculates daily calorie
+    and macronutrient goals based on a high-protein, whole-foods approach.
+    Also sets a general probiotic CFU target.
+    """
+    print("Welcome! Let's calculate your daily nutrition goals.")
+
+    # Get user input
+    while True:
+        try:
+            gender = input("Enter your gender (male/female): ").lower()
+            if gender not in ['male', 'female']:
+                raise ValueError("Please enter 'male' or 'female'.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    while True:
+        try:
+            age = int(input("Enter your age (years): "))
+            if not (15 <= age <= 100): # Reasonable age range
+                raise ValueError("Please enter a realistic age.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    while True:
+        try:
+            weight_kg = float(input("Enter your weight (kg): "))
+            if not (30 <= weight_kg <= 200): # Reasonable weight range
+                raise ValueError("Please enter a realistic weight in kg.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    while True:
+        try:
+            height_cm = float(input("Enter your height (cm): "))
+            if not (100 <= height_cm <= 220): # Reasonable height range
+                raise ValueError("Please enter a realistic height in cm.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    print("\n--- Activity Level Guide ---")
+    print("1. Sedentary (little to no exercise)")
+    print("2. Lightly active (light exercise/sports 1-3 days/week)")
+    print("3. Moderately active (moderate exercise/sports 3-5 days/week)")
+    print("4. Very active (hard exercise/sports 6-7 days/week)")
+    print("5. Extra active (very hard exercise/physical job)")
+    while True:
+        try:
+            activity_level = int(input("Select your activity level (1-5): "))
+            if not (1 <= activity_level <= 5):
+                raise ValueError("Please enter a number between 1 and 5.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    activity_multipliers = {
+        1: 1.2,
+        2: 1.375,
+        3: 1.55,
+        4: 1.725,
+        5: 1.9
+    }
+    activity_multiplier = activity_multipliers[activity_level]
+
+    # Calculate BMR using Mifflin-St Jeor Equation
+    # BMR (kcal) = (10 * weight in kg) + (6.25 * height in cm) - (5 * age in years) + S
+    # S = +5 for men and -161 for women
+    if gender == 'male':
+        bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + 5
+    else: # female
+        bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) - 161
+
+    # Calculate TDEE (Total Daily Energy Expenditure)
+    tdee = bmr * activity_multiplier
+
+    # --- Macronutrient Goals (High Protein, Whole Foods Focus) ---
+    # General recommendations for high protein: 1.6-2.2g per kg body weight
+    # For a high-protein diet, we'll aim for 2.0g/kg as a starting point.
+    protein_target_g = round(2.0 * weight_kg)
+
+    # Allocate remaining calories to carbs and fats.
+    # A common split for high protein could be: Protein (30-40%), Fat (25-35%), Carbs (30-40%)
+    # Let's target: Protein ~35%, Fat ~30%, Carbs ~35% of TDEE
+    protein_calories = protein_target_g * 4 # 4 kcal/g for protein
+    remaining_calories = tdee - protein_calories
+
+    # Aim for roughly 30% from fat, 35% from carbs.
+    # Note: If protein_calories are already high, this percentage split might shift.
+    # Let's ensure a minimum fat intake for health.
+    fat_target_g = round(tdee * 0.30 / 9) # 9 kcal/g for fat
+    carb_target_g = round((remaining_calories - (fat_target_g * 9)) / 4) # 4 kcal/g for carbs
+
+    # Adjust if carb target goes negative due to high protein or low TDEE
+    if carb_target_g < 0:
+        carb_target_g = 0
+        fat_target_g = round((tdee - protein_calories) / 9) # Allocate all remaining to fat
+
+    # --- Probiotic CFU Target ---
+    # Based on our research, a general support range for CFUs is 10-20 billion per day.
+    # We'll set a target within this range for tracking.
+    probiotic_cfu_target_billion = 15 # billion CFUs
+
+    daily_goals = {
+        'calories': round(tdee),
+        'protein_g': protein_target_g,
+        'carbs_g': carb_target_g,
+        'fat_g': fat_target_g,
+        'probiotic_cfu_target_billion': probiotic_cfu_target_billion
+    }
+    return daily_goals
+
+# --- 2. Food Data Dictionary (Occam's Razor Solution) ---
+# For simplicity, we define a small, curated dictionary of common whole foods.
+# CFUs for fermented foods are noted as 'present' rather than quantified due to variability.
+# The primary CFU tracking will come from a user-entered probiotic supplement.
+
+FOOD_DATA = {
+    # High Protein Sources (per 100g cooked/ready-to-eat unless specified)
+    'chicken breast (cooked)': {'protein_g': 31, 'carbs_g': 0, 'fat_g': 3.6, 'calories': 165},
+    'salmon (cooked)':        {'protein_g': 20, 'carbs_g': 0, 'fat_g': 13,  'calories': 208},
+    'lean ground beef (cooked)': {'protein_g': 26, 'carbs_g': 0, 'fat_g': 15, 'calories': 250},
+    'eggs (large, 1 egg)':     {'protein_g': 6,  'carbs_g': 0.6, 'fat_g': 5,   'calories': 78},
+    'greek yogurt (plain, 100g)': {'protein_g': 10, 'carbs_g': 3.6, 'fat_g': 0.4, 'calories': 59, 'probiotic': 'present'},
+    'cottage cheese (100g)':  {'protein_g': 11, 'carbs_g': 3,   'fat_g': 4.3, 'calories': 98},
+    'lentils (cooked, 100g)': {'protein_g': 9,  'carbs_g': 20,  'fat_g': 0.4, 'calories': 116},
+    'black beans (cooked, 100g)': {'protein_g': 8.9, 'carbs_g': 24, 'fat_g': 0.5, 'calories': 132},
+    'tofu (firm, 100g)':      {'protein_g': 8,  'carbs_g': 1.9, 'fat_g': 4.8, 'calories': 76},
+
+    # Whole Grains & Complex Carbs (per 100g cooked)
+    'oats (cooked, 100g)':    {'protein_g': 2.4, 'carbs_g': 12,  'fat_g': 1.4, 'calories': 71},
+    'brown rice (cooked, 100g)': {'protein_g': 2.7, 'carbs_g': 23,  'fat_g': 0.9, 'calories': 112},
+    'quinoa (cooked, 100g)':  {'protein_g': 4.4, 'carbs_g': 21,  'fat_g': 1.9, 'calories': 120},
+    'sweet potato (baked, 100g)': {'protein_g': 1.6, 'carbs_g': 20,  'fat_g': 0.1, 'calories': 86},
+
+    # Healthy Fats (per 100g unless specified)
+    'avocado (1/2 medium)':    {'protein_g': 2,   'carbs_g': 9,   'fat_g': 15,  'calories': 160},
+    'almonds (10g / ~10 nuts)': {'protein_g': 2.1, 'carbs_g': 2.2, 'fat_g': 5.3, 'calories': 58}, # per 10g
+    'olive oil (1 tbsp / 14g)': {'protein_g': 0,   'carbs_g': 0,   'fat_g': 14,  'calories': 120}, # per 1 tbsp
+
+    # Vegetables & Fruits (per 100g)
+    'broccoli (cooked)':      {'protein_g': 2.8, 'carbs_g': 5.2, 'fat_g': 0.4, 'calories': 34},
+    'spinach (raw)':          {'protein_g': 2.9, 'carbs_g': 3.6, 'fat_g': 0.4, 'calories': 23},
+    'apple (medium)':         {'protein_g': 0.3, 'carbs_g': 14,  'fat_g': 0.2, 'calories': 52},
+    'berries (mixed)':        {'protein_g': 0.7, 'carbs_g': 12,  'fat_g': 0.4, 'calories': 57},
+
+    # Fermented Foods (for general probiotic content, not quantified CFU)
+    'sauerkraut (100g)':     {'protein_g': 1.3, 'carbs_g': 4.3, 'fat_g': 0.1, 'calories': 19, 'probiotic': 'present'},
+    'kimchi (100g)':         {'protein_g': 2,   'carbs_g': 7,   'fat_g': 0.5, 'calories': 34, 'probiotic': 'present'},
+    'kefir (100ml)':         {'protein_g': 3.4, 'carbs_g': 4.8, 'fat_g': 3.7, 'calories': 64, 'probiotic': 'present'},
+}
+
+# --- 3. Meal Logging Function ---
+
+def log_meal(meal_name):
+    """
+    Allows the user to log items for a specific meal, selecting from FOOD_DATA.
+    """
+    meal_macros = {'protein_g': 0, 'carbs_g': 0, 'fat_g': 0, 'calories': 0}
+    print(f"\n--- Logging {meal_name} ---")
+    print("Available foods:")
+    # Print foods in columns for better readability if desired, or just list them.
+    # For a simple script, a single list is fine.
+    for food in FOOD_DATA:
+        print(f"- {food}")
+
+    while True:
+        food_choice = input(f"Enter a food item for {meal_name} (or 'done' to finish): ").lower()
+        if food_choice == 'done':
+            break
+        if food_choice not in FOOD_DATA:
+            print("Food not found. Please check the spelling or choose from the list.")
+            continue
+
+        food_info = FOOD_DATA[food_choice]
+        while True:
+            try:
+                serving_size = float(input(f"Enter serving size for {food_choice} (e.g., 100 for 100g, 1 for 1 egg): "))
+                if serving_size <= 0:
+                    raise ValueError("Serving size must be positive.")
+                break
+            except ValueError as e:
+                print(f"Invalid input: {e}")
+
+        # Scale macros and calories by serving size based on how the food data is defined
+        # Note: 'eggs' and 'olive oil' have different base units (per 1 egg, per 1 tbsp)
+        # If food_choice is 'eggs', serving_size is number of eggs
+        # If food_choice is 'olive oil', serving_size is number of tablespoons
+        # Otherwise, assume serving_size is in grams (where data is per 100g)
+        if food_choice == 'eggs (large, 1 egg)':
+            scale_factor = serving_size
+        elif food_choice == 'olive oil (1 tbsp / 14g)':
+            scale_factor = serving_size
+        elif food_choice == 'avocado (1/2 medium)':
+            # Assume 1 avocado serving is 1/2 avocado, so 1 = 1/2 avocado
+            scale_factor = serving_size
+        elif food_choice == 'almonds (10g / ~10 nuts)':
+            scale_factor = serving_size / 10 # Data is per 10g, user enters total grams
+        else: # Most other foods are per 100g by default in FOOD_DATA
+            scale_factor = serving_size / 100
+
+        meal_macros['protein_g'] += food_info['protein_g'] * scale_factor
+        meal_macros['carbs_g'] += food_info['carbs_g'] * scale_factor
+        meal_macros['fat_g'] += food_info['fat_g'] * scale_factor
+        meal_macros['calories'] += food_info['calories'] * scale_factor
+
+        print(f"Added {serving_size} of {food_choice}.")
+
+    return meal_macros
+
+# --- 4. Main Simulation Execution ---
+
+def main():
+    """
+    Main function to run the daily diet and probiotic log simulation.
+    """
+    daily_goals = calculate_daily_goals()
+    print("\n--- Your Daily Goals ---")
+    print(f"Calories: {daily_goals['calories']} kcal")
+    print(f"Protein: {daily_goals['protein_g']} g")
+    print(f"Carbohydrates: {daily_goals['carbs_g']} g")
+    print(f"Fat: {daily_goals['fat_g']} g")
+    print(f"Probiotic CFU Target: {daily_goals['probiotic_cfu_target_billion']} Billion CFUs (via supplement recommendation)")
+
+    total_macros = {'protein_g': 0, 'carbs_g': 0, 'fat_g': 0, 'calories': 0}
+    daily_probiotic_cfu = 0 # Track CFU from supplements only
+
+    # Log meals
+    meals = ['Breakfast', 'Lunch', 'Dinner']
+    for meal_name in meals:
+        meal_results = log_meal(meal_name)
+        for key in total_macros:
+            total_macros[key] += meal_results[key]
+
+    # Log probiotic supplement intake
+    print("\n--- Probiotic Supplement Intake ---")
+    while True:
+        try:
+            probiotic_input = input("Did you take a probiotic supplement today? (yes/no): ").lower()
+            if probiotic_input == 'yes':
+                cfu_val = float(input("Enter probiotic CFU from supplement (e.g., 10 for 10 Billion CFUs): "))
+                daily_probiotic_cfu += cfu_val
+            elif probiotic_input == 'no':
+                print("No probiotic supplement recorded.")
+            else:
+                raise ValueError("Please enter 'yes' or 'no'.")
+            break
+        except ValueError as e:
+            print(f"Invalid input: {e}")
+
+    # --- Daily Log Summary ---
+    print("\n--- Daily Log Summary ---")
+    print(f"Total Calories Consumed: {round(total_macros['calories'])} kcal")
+    print(f"Total Protein Consumed: {round(total_macros['protein_g'])} g")
+    print(f"Total Carbohydrates Consumed: {round(total_macros['carbs_g'])} g")
+    print(f"Total Fat Consumed: {round(total_macros['fat_g'])} g")
+    print(f"Probiotic CFUs from Supplement: {round(daily_probiotic_cfu)} Billion CFUs")
+
+    print("\n--- Goal Comparison ---")
+    print(f"Calories Goal: {daily_goals['calories']} kcal | Actual: {round(total_macros['calories'])} kcal")
+    print(f"Protein Goal: {daily_goals['protein_g']} g | Actual: {round(total_macros['protein_g'])} g")
+    print(f"Carbs Goal: {daily_goals['carbs_g']} g | Actual: {round(total_macros['carbs_g'])} g")
+    print(f"Fat Goal: {daily_goals['fat_g']} g | Actual: {round(total_macros['fat_g'])} g")
+
+    if daily_probiotic_cfu >= daily_goals['probiotic_cfu_target_billion']:
+        print(f"Probiotic CFU Goal Met: Yes! ({round(daily_probiotic_cfu)} Billion CFUs)")
+    else:
+        print(f"Probiotic CFU Goal Met: No. ({round(daily_probiotic_cfu)} Billion CFUs of {daily_goals['probiotic_cfu_target_billion']} Billion CFUs needed)")
+
+    print("\nRemember, this is a simplified tool. Always consult with a healthcare professional or registered dietitian for personalized advice.")
+    print("For gut health, focus on a diverse, whole-foods diet rich in fiber, adequate hydration, stress management, and regular exercise, in addition to any targeted probiotic use.")
+
+# This ensures the main() function runs when the script is executed directly.
+if __name__ == "__main__":
+    main()
