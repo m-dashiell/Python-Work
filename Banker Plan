@@ -1,0 +1,42 @@
+# This code solves the Banker Plan, a 6 kyu Python programming problem
+# from Codewars involving control flow and data structures 
+# https://www.codewars.com/kata/56445c4755d0e45b8c00010a/python 
+
+
+def fortune(f0,p,c0,n,interest):
+
+    p = p/100
+    interest = interest/100
+    import math
+
+    fortune_list = []
+    withdraw_list = []
+
+    f1 = f0 + p * f0 - c0
+    c1 = c0 + c0*interest
+
+    fortune_list.append(f1)
+    withdraw_list.append(c1)
+
+    for i in range(1,n):
+        withdraw_list.append(int(withdraw_list[i-1]+withdraw_list[i-1]*interest))
+        
+
+
+    for i in range(1,n):
+        fortune_list.append(int(fortune_list[i-1] + p * fortune_list[i-1] - withdraw_list[i-1]))
+        
+
+    fortune_result = []
+
+    for i in range(1,n):
+        if fortune_list[i] < withdraw_list[i]:
+            fortune_result.append(False)
+        else:
+            fortune_result.append(True)
+
+    if False in fortune_result:
+        return(False)
+    else:
+        return(True)
+
